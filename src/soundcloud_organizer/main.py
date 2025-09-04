@@ -2,7 +2,9 @@ import typer
 from rich.console import Console
 
 from soundcloud_organizer import auth
+from soundcloud_organizer.client import SoundCloudClient
 from soundcloud_organizer.config import load_settings, save_settings
+from soundcloud_organizer.processor import TrackLengthFilter, process_stream
 
 app = typer.Typer()
 console = Console()
@@ -32,6 +34,33 @@ def login(
         console.print(
             f"❌ An error occurred during authentication: {e}", style="bold red"
         )
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def organize(
+    length_filter: TrackLengthFilter = typer.Option(
+        TrackLengthFilter.ALL,
+        "--length-filter",
+        "-f",
+        case_sensitive=False,
+        help="Filter tracks by length.",
+    )
+):
+    """Fetch, filter, and organize tracks from your SoundCloud stream."""
+    console.print("🚀 Starting SoundCloud Organizer...", style="bold magenta")
+    settings = load_settings()
+
+    if not settings.token:
+        console.print("❌ You are not logged in. Please run 'soundcloud-organizer login' first.", style="bold red")
+        raise typer.Exit(code=1)
+
+    try:
+        session = auth.get_authenticated_session(settings)
+        client = SoundCloudClient(session)
+        process_stream(client, length_filter, console)
+    except Exception as e:
+        console.print(f"❌ An unexpected error occurred: {e}", style="bold red")
         raise typer.Exit(code=1)
 
 

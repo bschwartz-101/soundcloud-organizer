@@ -34,4 +34,6 @@
   - [ ] 4.2 In `processor.py`, define an `Enum` for track length filters and a function to check if a track matches a filter.
   - [x] 4.3 Implement the main `process_stream` function to orchestrate fetching, filtering, and adding tracks to monthly playlists.
 - [ ] 5.0 Build the CLI and Main Execution Flow
+  - [x] 5.1 Add an `organize` command to `main.py` that accepts a `length-filter` argument.
+  - [x] 5.2 Implement the main execution logic within the `organize` command: load settings, get an authenticated client, and call the `process_stream` function.
 - [ ] 6.0 Add Testing and Documentation
