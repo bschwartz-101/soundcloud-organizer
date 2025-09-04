@@ -1,10 +1,16 @@
 [project]
 name = "soundcloud-organizer"
 version = "0.1.0"
-description = "Add your description here"
+description = "A CLI tool to automatically organize your SoundCloud stream into monthly playlists."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "typer",
+    "rich",
+    "requests",
+    "requests-oauthlib",
+    "pydantic",
+]
 
 [project.scripts]
 soundcloud-organizer = "soundcloud_organizer:main"
