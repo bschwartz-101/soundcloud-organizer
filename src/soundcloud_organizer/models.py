@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class User(BaseModel):
@@ -38,6 +38,4 @@ class StreamItem(BaseModel):
     type: str  # e.g., 'track', 'track-repost'
     origin: Optional[Track] = None
 
-    class Config:
-        # The 'origin' field in the API can sometimes be missing for certain item types
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")

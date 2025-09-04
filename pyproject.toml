@@ -18,3 +18,9 @@ soundcloud-organizer = "soundcloud_organizer:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+]
