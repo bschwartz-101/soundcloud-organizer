@@ -59,9 +59,14 @@ def organize(
         "-s",
         help="Filter by time interval. E.g., 'last-month', 'ytd', '2023', '2023-01'.",
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable debug logging to the console.",
+    ),
 ):
     """Fetch, filter, and organize tracks from your SoundCloud stream."""
-    setup_logging(debug=False)
+    setup_logging(debug=debug)
     if dry_run:
         console.print(
             "🚀 Starting SoundCloud Organizer in [bold yellow]dry-run[/bold yellow] mode...",

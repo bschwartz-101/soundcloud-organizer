@@ -23,12 +23,12 @@
     -   [x] 1.3 In `logging_config.py`, create a `setup_logging` function that takes a `debug` boolean flag.
     -   [x] 1.4 In `setup_logging`, remove the default `loguru` handler and add a console sink with level `INFO` (or `DEBUG` if the flag is true) and `colorize=True`.
     -   [x] 1.5 In `main.py`, import and call `setup_logging()` at the start of the `organize` and `login` commands.
--   [ ] **2.0 Implement Advanced Logger Configuration**
-    -   [ ] 2.1 In `logging_config.py`, add a file sink to `setup_logging` that writes to `logs/app.log` with level `DEBUG`.
-    -   [ ] 2.2 Configure the file sink for rotation (e.g., `rotation="10 MB"`) and retention (e.g., `retention="5 files"`).
-    -   [ ] 2.3 Configure both sinks to automatically catch unhandled exceptions (`catch=True`).
-    -   [ ] 2.4 Implement a filter function to redact sensitive data (`client_secret`, `access_token`, `refresh_token`) from log records. Apply this filter to both sinks.
-    -   [ ] 2.5 In `main.py`, add a `--debug` boolean `typer.Option` to the `organize` command and pass its value to `setup_logging`.
+-   [x] **2.0 Implement Advanced Logger Configuration**
+    -   [x] 2.1 In `logging_config.py`, add a file sink to `setup_logging` that writes to `logs/app.log` with level `DEBUG`.
+    -   [x] 2.2 Configure the file sink for rotation (e.g., `rotation="10 MB"`) and retention (e.g., `retention="5 files"`).
+    -   [x] 2.3 Configure both sinks to automatically catch unhandled exceptions (`catch=True`).
+    -   [x] 2.4 Implement a filter function to redact sensitive data (`client_secret`, `access_token`, `refresh_token`) from log records. Apply this filter to both sinks.
+    -   [x] 2.5 In `main.py`, add a `--debug` boolean `typer.Option` to the `organize` command and pass its value to `setup_logging`.
 -   [ ] **3.0 Integrate Logging into the Application**
     -   [ ] 3.1 In `main.py`, replace `rich.console.print` and `rich.console.log` calls with `logger` calls (`logger.info`, `logger.error`, etc.). Keep `rich` for purely presentational output like the initial "dry-run" message.
     -   [ ] 3.2 In `auth.py`, import `logger` and replace `print` statements with appropriate `logger` calls (e.g., `logger.info` for browser opening, `logger.debug` for token refresh).
