@@ -1,4 +1,5 @@
 import typer
+from loguru import logger
 from rich.console import Console
 
 from soundcloud_organizer import auth
@@ -20,7 +21,7 @@ def login(
 ):
     """Authorize the application with your SoundCloud account."""
     setup_logging(debug=False)
-    console.print("Starting SoundCloud authentication...", style="bold yellow")
+    logger.info("Starting SoundCloud authentication...")
     try:
         token = auth.get_token(client_id, client_secret)
         settings = load_settings()
@@ -28,14 +29,9 @@ def login(
         settings.client_secret = client_secret
         settings.token = token
         save_settings(settings)
-        console.print(
-            "✅ Authentication successful! Your credentials have been saved.",
-            style="bold green",
-        )
+        logger.info("✅ Authentication successful! Your credentials have been saved.")
     except Exception as e:
-        console.print(
-            f"❌ An error occurred during authentication: {e}", style="bold red"
-        )
+        logger.error(f"An error occurred during authentication: {e}")
         raise typer.Exit(code=1)
 
 
@@ -78,9 +74,8 @@ def organize(
     settings = load_settings()
 
     if not settings.token:
-        console.print(
-            "❌ You are not logged in. Please run 'soundcloud-organizer login' first.",
-            style="bold red",
+        logger.error(
+            "You are not logged in. Please run 'soundcloud-organizer login' first."
         )
         raise typer.Exit(code=1)
 
@@ -89,13 +84,10 @@ def organize(
         client = SoundCloudClient(session)
         process_stream(client, length_filter, console, dry_run, scope)
     except ValueError as e:
-        console.print(
-            f"❌ Error processing scope: {e}",
-            style="bold red",
-        )
+        logger.error(f"Error processing scope: {e}")
         raise typer.Exit(code=1)
     except Exception as e:
-        console.print(f"❌ An unexpected error occurred: {e}", style="bold red")
+        logger.exception(f"An unexpected error occurred: {e}")
         raise typer.Exit(code=1)
 
 

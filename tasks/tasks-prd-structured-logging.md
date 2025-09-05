@@ -29,10 +29,10 @@
     -   [x] 2.3 Configure both sinks to automatically catch unhandled exceptions (`catch=True`).
     -   [x] 2.4 Implement a filter function to redact sensitive data (`client_secret`, `access_token`, `refresh_token`) from log records. Apply this filter to both sinks.
     -   [x] 2.5 In `main.py`, add a `--debug` boolean `typer.Option` to the `organize` command and pass its value to `setup_logging`.
--   [ ] **3.0 Integrate Logging into the Application**
-    -   [ ] 3.1 In `main.py`, replace `rich.console.print` and `rich.console.log` calls with `logger` calls (`logger.info`, `logger.error`, etc.). Keep `rich` for purely presentational output like the initial "dry-run" message.
-    -   [ ] 3.2 In `auth.py`, import `logger` and replace `print` statements with appropriate `logger` calls (e.g., `logger.info` for browser opening, `logger.debug` for token refresh).
-    -   [ ] 3.3 In `client.py`, import `logger` and replace `console.log` with `logger.debug`. Add `logger.debug` calls for API requests, including method, URL, and response status. Use `@logger.catch` or `try/except` with `logger.exception` for robustness.
-    -   [ ] 3.4 In `processor.py`, import `logger` and replace `rich.console.print` and `rich.console.log` with `logger` calls. Use `logger.info` for major steps, and `logger.debug` for detailed per-track information.
+-   [x] **3.0 Integrate Logging into the Application**
+    -   [x] 3.1 In `main.py`, replace `rich.console.print` and `rich.console.log` calls with `logger` calls (`logger.info`, `logger.error`, etc.). Keep `rich` for purely presentational output like the initial "dry-run" message.
+    -   [x] 3.2 In `auth.py`, import `logger` and replace `print` statements with appropriate `logger` calls (e.g., `logger.info` for browser opening, `logger.debug` for token refresh).
+    -   [x] 3.3 In `client.py`, import `logger` and replace `console.log` with `logger.debug`. Add `logger.debug` calls for API requests, including method, URL, and response status. Use `@logger.catch` or `try/except` with `logger.exception` for robustness.
+    -   [x] 3.4 In `processor.py`, import `logger` and replace `rich.console.print` and `rich.console.log` with `logger` calls. Use `logger.info` for major steps, and `logger.debug` for detailed per-track information.
 -   [ ] **4.0 Add Testing for New Logging Functionality**
     -   [ ] 4.1 In `tests/test_main.py`, add a test to verify that the `--debug` flag is correctly added to the `organize` command's context. (Directly testing log output is complex; we will test the flag's presence).

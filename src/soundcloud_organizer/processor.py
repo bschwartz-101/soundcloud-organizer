@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 
+from loguru import logger
 from rich.console import Console
 
 from soundcloud_organizer.client import SoundCloudClient
@@ -81,14 +82,11 @@ def process_stream(
         dry_run: If True, only print actions without performing them.
         scope: Optional time interval to filter tracks by.
     """
-    console.print(
-        f"Fetching stream and filtering for '{length_filter.value}' tracks...",
-        style="yellow",
-    )
+    logger.info(f"Fetching stream and filtering for '{length_filter.value}' tracks...")
 
     date_range = None
     if scope:
-        console.print(f"Filtering for time interval: '{scope}'", style="yellow")
+        logger.info(f"Filtering for time interval: '{scope}'")
         # ValueError is handled upstream in main.py
         date_range = parse_scope(scope)
 
@@ -107,7 +105,7 @@ def process_stream(
         if is_in_scope and is_length_match:
             playlist_name = track.created_at.strftime("%Y-%m")
             tracks_by_playlist[playlist_name].append(track)
-            console.log(
+            logger.debug(
                 f"Found matching track: '{track.title}' -> Playlist '{playlist_name}'"
             )
             # Reset counter on a successful match
@@ -116,8 +114,8 @@ def process_stream(
             # If a scope is defined and the track is older than the start date
             if date_range and track.created_at < date_range[0]:
                 consecutive_out_of_scope_count += 1
-                console.log(
-                    f"[dim]Skipping older track: '{track.title}' ({track.created_at.date()}) "
+                logger.debug(
+                    f"Skipping older track: '{track.title}' ({track.created_at.date()}) "
                     f"({consecutive_out_of_scope_count}/{CONSECUTIVE_OUT_OF_SCOPE_LIMIT})[/dim]"
                 )
 
@@ -126,13 +124,11 @@ def process_stream(
             date_range
             and consecutive_out_of_scope_count >= CONSECUTIVE_OUT_OF_SCOPE_LIMIT
         ):
-            console.print("\nStopping early: Found enough consecutive older tracks.")
+            logger.info("Stopping early: Found enough consecutive older tracks.")
             break
 
     if not tracks_by_playlist:
-        console.print(
-            "No new matching tracks found in your stream.", style="bold green"
-        )
+        logger.info("No new matching tracks found in your stream.")
         return
 
     if dry_run:
@@ -144,7 +140,7 @@ def process_stream(
             console.print(f"Would add {len(tracks)} track(s):\n{track_titles}")
         return
 
-    console.print("\nProcessing playlists...", style="yellow")
+    logger.info("Processing playlists...")
 
     # 2. Get existing playlists to avoid re-creating them
     existing_playlists = {p.title: p for p in client.get_my_playlists()}
@@ -155,8 +151,8 @@ def process_stream(
         playlist = existing_playlists.get(playlist_name)
 
         if not playlist:
-            console.print(f"Creating new playlist: '{playlist_name}'")
-            console.print(
+            logger.info(f"Creating new playlist: '{playlist_name}'")
+            logger.info(
                 f"Adding {len(track_ids)} track(s) to new playlist '{playlist_name}'..."
             )
             try:
@@ -164,11 +160,12 @@ def process_stream(
                 playlist = client.create_playlist(playlist_name, track_ids)
                 existing_playlists[playlist_name] = playlist  # Add to our cache
             except Exception as e:
-                console.print(
-                    f"Error creating playlist {playlist_name}: {e}", style="bold red"
-                )
+                logger.exception(f"Error creating playlist {playlist_name}: {e}")
         else:
             # If the playlist exists, add only the new tracks
+            logger.info(
+                f"Adding {len(track_ids)} track(s) to existing playlist '{playlist_name}'..."
+            )
             client.add_tracks_to_playlist(playlist.id, track_ids)
 
-    console.print("\n✅ Processing complete!", style="bold green")
+    logger.info("✅ Processing complete!")

@@ -2,12 +2,10 @@
 
 from typing import Iterator, List, Optional
 
+from loguru import logger
 from requests_oauthlib import OAuth2Session
-from rich.console import Console
 
 from soundcloud_organizer.models import Playlist, StreamItem
-
-console = Console()
 
 API_BASE_URL = "https://api.soundcloud.com"
 
@@ -39,7 +37,9 @@ class SoundCloudClient:
         params = {"limit": 50}  # Use a reasonable page size
 
         while url:
+            logger.debug(f"Fetching stream page: GET {url}")
             response = self.session.get(url, params=params)
+            logger.debug(f"Response status: {response.status_code}")
             response.raise_for_status()  # Raise an exception for bad status codes
             data = response.json()
 
@@ -63,7 +63,9 @@ class SoundCloudClient:
             A list of Playlist objects.
         """
         url = f"{self.base_url}/me/playlists"
+        logger.debug(f"Fetching user playlists: GET {url}")
         response = self.session.get(url)
+        logger.debug(f"Response status: {response.status_code}")
         response.raise_for_status()
         playlists_data = response.json()
         return [Playlist.model_validate(p) for p in playlists_data]
@@ -80,6 +82,7 @@ class SoundCloudClient:
             The newly created Playlist object.
         """
         url = f"{self.base_url}/playlists"
+        logger.debug(f"Creating playlist '{title}': POST {url}")
         track_payload = [{"id": track_id} for track_id in track_ids]
         payload = {
             "playlist": {
@@ -89,6 +92,7 @@ class SoundCloudClient:
             }
         }
         response = self.session.post(url, json=payload)
+        logger.debug(f"Response status: {response.status_code}")
         response.raise_for_status()
         return Playlist.model_validate(response.json())
 
@@ -107,7 +111,9 @@ class SoundCloudClient:
         """
         # 1. Get the full playlist object to ensure we have all its current tracks
         playlist_url = f"{self.base_url}/playlists/{playlist_id}"
+        logger.debug(f"Fetching playlist details: GET {playlist_url}")
         response = self.session.get(playlist_url)
+        logger.debug(f"Response status: {response.status_code}")
         response.raise_for_status()
         playlist = Playlist.model_validate(response.json())
 
@@ -120,7 +126,7 @@ class SoundCloudClient:
         ]
 
         if not new_track_ids:
-            console.log(f"No new tracks to add to playlist '{playlist.title}'.")
+            logger.debug(f"No new tracks to add to playlist '{playlist.title}'.")
             return None
 
         # 4. Combine existing and new track IDs for the final payload.
@@ -129,8 +135,10 @@ class SoundCloudClient:
         track_payload = [{"id": track_id} for track_id in final_track_ids]
 
         # 5. Send the PUT request with the full new list of tracks
+        logger.debug(f"Updating playlist '{playlist.title}': PUT {playlist_url}")
         response = self.session.put(
             playlist_url, json={"playlist": {"tracks": track_payload}}
         )
+        logger.debug(f"Response status: {response.status_code}")
         response.raise_for_status()
         return Playlist.model_validate(response.json())

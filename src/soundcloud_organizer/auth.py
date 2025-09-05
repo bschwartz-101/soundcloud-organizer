@@ -7,6 +7,7 @@ import webbrowser
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
+from loguru import logger
 from requests_oauthlib import OAuth2Session
 
 from soundcloud_organizer.config import Settings, Token, save_settings
@@ -74,7 +75,7 @@ def get_token(client_id: str, client_secret: str) -> Token:
         soundcloud = OAuth2Session(client_id, redirect_uri=REDIRECT_URI, pkce="S256")
         authorization_url, _ = soundcloud.authorization_url(AUTHORIZATION_URL)
 
-        print(f"Opening your browser to visit:\n\n{authorization_url}\n")
+        logger.info(f"Opening browser for authentication: {authorization_url}")
         webbrowser.open(authorization_url)
 
         code_received.wait()  # Wait for the handler to receive the code
@@ -111,7 +112,7 @@ def get_authenticated_session(settings: Settings) -> OAuth2Session:
 
     def token_updater(new_token_data: dict):
         """Callback function to save the refreshed token."""
-        print("OAuth token has been refreshed, saving new token to config.")
+        logger.debug("OAuth token has been refreshed, saving new token to config.")
         settings.token = Token.model_validate(new_token_data)
         save_settings(settings)
 
