@@ -129,16 +129,28 @@ class SoundCloudClient:
             logger.debug(f"No new tracks to add to playlist '{playlist.title}'.")
             return None
 
-        # 4. Combine existing and new track IDs for the final payload.
-        # The API expects the full list of tracks for the playlist.
-        final_track_ids = list(existing_track_ids) + new_track_ids
-        track_payload = [{"id": track_id} for track_id in final_track_ids]
-
-        # 5. Send the PUT request with the full new list of tracks
-        logger.debug(f"Updating playlist '{playlist.title}': PUT {playlist_url}")
-        response = self.session.put(
-            playlist_url, json={"playlist": {"tracks": track_payload}}
+        # 4. The SoundCloud API has a limit on how many tracks can be in a playlist
+        # (around 500) and how many can be sent in a single PUT request. To avoid
+        # a 422 error, we add tracks in batches.
+        logger.info(
+            f"Adding {len(new_track_ids)} new track(s) to playlist '{playlist.title}' in batches."
         )
-        logger.debug(f"Response status: {response.status_code}")
-        response.raise_for_status()
+        current_track_ids = list(existing_track_ids)
+
+        # Add new tracks in chunks of 50 to stay well within API limits
+        for i in range(0, len(new_track_ids), 50):
+            batch_ids = new_track_ids[i : i + 50]
+            current_track_ids.extend(batch_ids)
+            track_payload = [{"id": track_id} for track_id in current_track_ids]
+
+            logger.debug(
+                f"Updating playlist '{playlist.title}' with batch of {len(batch_ids)} tracks..."
+            )
+            response = self.session.put(
+                playlist_url, json={"playlist": {"tracks": track_payload}}
+            )
+            logger.debug(f"Response status: {response.status_code}")
+            response.raise_for_status()
+
+        # After the final batch, we can return the updated playlist object
         return Playlist.model_validate(response.json())

@@ -34,5 +34,5 @@
     -   [x] 3.2 In `auth.py`, import `logger` and replace `print` statements with appropriate `logger` calls (e.g., `logger.info` for browser opening, `logger.debug` for token refresh).
     -   [x] 3.3 In `client.py`, import `logger` and replace `console.log` with `logger.debug`. Add `logger.debug` calls for API requests, including method, URL, and response status. Use `@logger.catch` or `try/except` with `logger.exception` for robustness.
     -   [x] 3.4 In `processor.py`, import `logger` and replace `rich.console.print` and `rich.console.log` with `logger` calls. Use `logger.info` for major steps, and `logger.debug` for detailed per-track information.
--   [ ] **4.0 Add Testing for New Logging Functionality**
-    -   [ ] 4.1 In `tests/test_main.py`, add a test to verify that the `--debug` flag is correctly added to the `organize` command's context. (Directly testing log output is complex; we will test the flag's presence).
+-   [x] **4.0 Add Testing for New Logging Functionality**
+    -   [x] 4.1 In `tests/test_main.py`, add a test to verify that the `--debug` flag is correctly added to the `organize` command's context. (Directly testing log output is complex; we will test the flag's presence).

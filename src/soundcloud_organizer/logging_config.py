@@ -39,7 +39,7 @@ def setup_logging(debug: bool):
         "logs/app.log",
         level="DEBUG",
         rotation="10 MB",
-        retention="5 files",
+        retention=5,
         catch=True,
         filter=sensitive_data_filter,
     )
