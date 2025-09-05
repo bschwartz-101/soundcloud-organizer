@@ -51,6 +51,12 @@ def organize(
         "--dry-run",
         help="Show what tracks would be organized without making any changes.",
     ),
+    scope: str | None = typer.Option(
+        None,
+        "--scope",
+        "-s",
+        help="Filter by time interval. E.g., 'last-month', 'ytd', '2023', '2023-01'.",
+    ),
 ):
     """Fetch, filter, and organize tracks from your SoundCloud stream."""
     if dry_run:
@@ -73,7 +79,7 @@ def organize(
     try:
         session = auth.get_authenticated_session(settings)
         client = SoundCloudClient(session)
-        process_stream(client, length_filter, console, dry_run)
+        process_stream(client, length_filter, console, dry_run, scope)
     except Exception as e:
         console.print(f"❌ An unexpected error occurred: {e}", style="bold red")
         raise typer.Exit(code=1)

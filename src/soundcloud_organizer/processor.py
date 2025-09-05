@@ -46,6 +46,7 @@ def process_stream(
     length_filter: TrackLengthFilter,
     console: Console,
     dry_run: bool = False,
+    scope: str | None = None,
 ):
     """
     Fetches the stream, filters tracks, and adds them to monthly playlists.
@@ -55,6 +56,7 @@ def process_stream(
         length_filter: The track length filter to apply.
         console: A rich Console instance for output.
         dry_run: If True, only print actions without performing them.
+        scope: Optional time interval to filter tracks by.
     """
     console.print(
         f"Fetching stream and filtering for '{length_filter.value}' tracks...",
