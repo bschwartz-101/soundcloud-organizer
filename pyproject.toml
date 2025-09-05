@@ -6,21 +6,20 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "typer",
+    "loguru",
     "rich",
     "requests",
     "requests-oauthlib",
     "pydantic",
+    "python-dateutil",
 ]
 
 [project.scripts]
-soundcloud-organizer = "soundcloud_organizer:main"
+soundcloud-organizer = "soundcloud_organizer.main:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.optional-dependencies]
-dev = [
-    "pytest",
-    "pytest-mock",
-]
+dev = ["pytest", "pytest-mock"]

@@ -3,8 +3,11 @@
 from typing import Iterator, List, Optional
 
 from requests_oauthlib import OAuth2Session
+from rich.console import Console
 
 from soundcloud_organizer.models import Playlist, StreamItem
+
+console = Console()
 
 API_BASE_URL = "https://api.soundcloud.com"
 
@@ -65,22 +68,24 @@ class SoundCloudClient:
         playlists_data = response.json()
         return [Playlist.model_validate(p) for p in playlists_data]
 
-    def create_playlist(self, title: str) -> Playlist:
+    def create_playlist(self, title: str, track_ids: List[int]) -> Playlist:
         """
-        Creates a new public playlist.
+        Creates a new public playlist with an initial set of tracks.
 
         Args:
             title: The title of the new playlist.
+            track_ids: A list of track IDs to add to the new playlist.
 
         Returns:
             The newly created Playlist object.
         """
         url = f"{self.base_url}/playlists"
+        track_payload = [{"id": track_id} for track_id in track_ids]
         payload = {
             "playlist": {
                 "title": title,
                 "sharing": "public",
-                "tracks": [],
+                "tracks": track_payload,
             }
         }
         response = self.session.post(url, json=payload)
@@ -100,7 +105,7 @@ class SoundCloudClient:
         Returns:
             The updated Playlist object if changes were made, otherwise None.
         """
-        # 1. Get the full playlist object, including its current tracks
+        # 1. Get the full playlist object to ensure we have all its current tracks
         playlist_url = f"{self.base_url}/playlists/{playlist_id}"
         response = self.session.get(playlist_url)
         response.raise_for_status()
@@ -110,17 +115,18 @@ class SoundCloudClient:
         existing_track_ids = {track.id for track in playlist.tracks}
 
         # 3. Determine which of the new tracks are not already in the playlist
-        new_track_ids_to_add = [
+        new_track_ids = [
             track_id for track_id in track_ids if track_id not in existing_track_ids
         ]
 
-        if not new_track_ids_to_add:
-            print(f"No new tracks to add to playlist {playlist.title}.")
+        if not new_track_ids:
+            console.log(f"No new tracks to add to playlist '{playlist.title}'.")
             return None
 
-        # 4. Combine existing and new track IDs for the update payload
-        updated_track_ids = list(existing_track_ids) + new_track_ids_to_add
-        track_payload = [{"id": track_id} for track_id in updated_track_ids]
+        # 4. Combine existing and new track IDs for the final payload.
+        # The API expects the full list of tracks for the playlist.
+        final_track_ids = list(existing_track_ids) + new_track_ids
+        track_payload = [{"id": track_id} for track_id in final_track_ids]
 
         # 5. Send the PUT request with the full new list of tracks
         response = self.session.put(

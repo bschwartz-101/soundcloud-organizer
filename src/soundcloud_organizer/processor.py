@@ -1,12 +1,17 @@
 """Houses the core logic for filtering tracks and processing the stream."""
 
 from collections import defaultdict
+from datetime import datetime
 from enum import Enum
 
 from rich.console import Console
 
 from soundcloud_organizer.client import SoundCloudClient
 from soundcloud_organizer.models import Track
+from soundcloud_organizer.scope_parser import parse_scope
+
+# Number of consecutive tracks older than the scope to see before stopping.
+CONSECUTIVE_OUT_OF_SCOPE_LIMIT = 25
 
 
 class TrackLengthFilter(str, Enum):
@@ -41,6 +46,24 @@ def track_matches_filter(track: Track, length_filter: TrackLengthFilter) -> bool
     return False
 
 
+def track_matches_scope(
+    track: Track, date_range: tuple[datetime, datetime] | None
+) -> bool:
+    """
+    Checks if a track's creation date falls within the specified date range.
+
+    Args:
+        track: The Track object to check.
+        date_range: A tuple of (start_date, end_date) or None.
+
+    Returns:
+        True if the track is within the scope, False otherwise.
+    """
+    if date_range is None:
+        return True  # No scope provided, so all tracks match
+    return date_range[0] <= track.created_at <= date_range[1]
+
+
 def process_stream(
     client: SoundCloudClient,
     length_filter: TrackLengthFilter,
@@ -63,17 +86,48 @@ def process_stream(
         style="yellow",
     )
 
+    date_range = None
+    if scope:
+        console.print(f"Filtering for time interval: '{scope}'", style="yellow")
+        # ValueError is handled upstream in main.py
+        date_range = parse_scope(scope)
+
     tracks_by_playlist = defaultdict(list)
+    consecutive_out_of_scope_count = 0
 
     # 1. Fetch stream, filter, and group tracks by target playlist name
     for item in client.get_stream():
         track = item.origin
-        if track and track_matches_filter(track, length_filter):
+        if not track:
+            continue
+
+        is_in_scope = track_matches_scope(track, date_range)
+        is_length_match = track_matches_filter(track, length_filter)
+
+        if is_in_scope and is_length_match:
             playlist_name = track.created_at.strftime("%Y-%m")
             tracks_by_playlist[playlist_name].append(track)
             console.log(
                 f"Found matching track: '{track.title}' -> Playlist '{playlist_name}'"
             )
+            # Reset counter on a successful match
+            consecutive_out_of_scope_count = 0
+        else:
+            # If a scope is defined and the track is older than the start date
+            if date_range and track.created_at < date_range[0]:
+                consecutive_out_of_scope_count += 1
+                console.log(
+                    f"[dim]Skipping older track: '{track.title}' ({track.created_at.date()}) "
+                    f"({consecutive_out_of_scope_count}/{CONSECUTIVE_OUT_OF_SCOPE_LIMIT})[/dim]"
+                )
+
+        # If we hit the limit, stop processing the stream.
+        if (
+            date_range
+            and consecutive_out_of_scope_count >= CONSECUTIVE_OUT_OF_SCOPE_LIMIT
+        ):
+            console.print("\nStopping early: Found enough consecutive older tracks.")
+            break
 
     if not tracks_by_playlist:
         console.print(
@@ -102,18 +156,19 @@ def process_stream(
 
         if not playlist:
             console.print(f"Creating new playlist: '{playlist_name}'")
+            console.print(
+                f"Adding {len(track_ids)} track(s) to new playlist '{playlist_name}'..."
+            )
             try:
-                playlist = client.create_playlist(playlist_name)
+                # Create the playlist and add tracks in one API call
+                playlist = client.create_playlist(playlist_name, track_ids)
                 existing_playlists[playlist_name] = playlist  # Add to our cache
             except Exception as e:
                 console.print(
                     f"Error creating playlist {playlist_name}: {e}", style="bold red"
                 )
-                continue
-
-        console.print(
-            f"Adding {len(track_ids)} track(s) to playlist '{playlist.title}'..."
-        )
-        client.add_tracks_to_playlist(playlist.id, track_ids)
+        else:
+            # If the playlist exists, add only the new tracks
+            client.add_tracks_to_playlist(playlist.id, track_ids)
 
     console.print("\n✅ Processing complete!", style="bold green")

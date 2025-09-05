@@ -24,25 +24,25 @@
     -   [x] 1.5 Update the call to `process_stream` to pass the new `scope` argument.
 
 -   [ ] **2.0 Create a New Module for Parsing the `--scope` Argument**
-    -   [ ] 2.1 Create a new file: `src/soundcloud_organizer/scope_parser.py`.
-    -   [ ] 2.2 Add `python-dateutil` as a dependency for easier date calculations: `uv pip install python-dateutil`.
-    -   [ ] 2.3 In `scope_parser.py`, create a main function `parse_scope(scope_str: str) -> tuple[datetime, datetime]`. This function will act as a router.
-    -   [ ] 2.4 Implement the logic to parse the `last-month`, `last-year`, and `ytd` keywords.
-    -   [ ] 2.5 Implement the logic to parse the `YYYY` and `YYYY-MM` formats. Regular expressions can be useful here.
-    -   [ ] 2.6 If the `scope_str` is invalid, the function should raise a `ValueError` with a user-friendly message.
-    -   [ ] 2.7 Create the corresponding test file: `tests/test_scope_parser.py`.
-    -   [ ] 2.8 Write unit tests for each valid scope keyword and format to ensure they return the correct start and end datetimes.
-    -   [ ] 2.9 Write a unit test to verify that an invalid scope string correctly raises a `ValueError`.
+    -   [x] 2.1 Create a new file: `src/soundcloud_organizer/scope_parser.py`.
+    -   [x] 2.2 Add `python-dateutil` as a dependency for easier date calculations: `uv pip install python-dateutil`.
+    -   [x] 2.3 In `scope_parser.py`, create a main function `parse_scope(scope_str: str) -> tuple[datetime, datetime]`. This function will act as a router.
+    -   [x] 2.4 Implement the logic to parse the `last-month`, `last-year`, and `ytd` keywords.
+    -   [x] 2.5 Implement the logic to parse the `YYYY` and `YYYY-MM` formats. Regular expressions can be useful here.
+    -   [x] 2.6 If the `scope_str` is invalid, the function should raise a `ValueError` with a user-friendly message.
+    -   [x] 2.7 Create the corresponding test file: `tests/test_scope_parser.py`.
+    -   [x] 2.8 Write unit tests for each valid scope keyword and format to ensure they return the correct start and end datetimes.
+    -   [x] 2.9 Write a unit test to verify that an invalid scope string correctly raises a `ValueError`.
 
 -   [ ] **3.0 Integrate Date Filtering into the Core Processing Logic**
-    -   [ ] 3.1 In `src/soundcloud_organizer/processor.py`, update the `process_stream` function signature to accept the new `scope: str | None` parameter.
-    -   [ ] 3.2 At the beginning of `process_stream`, if `scope` is not `None`, call the `scope_parser.parse_scope` function to get the date range. Handle the potential `ValueError` and print it to the console, then exit gracefully.
-    -   [ ] 3.3 Create a new filter function `track_matches_scope(track: Track, date_range: tuple[datetime, datetime] | None) -> bool`.
-    -   [ ] 3.4 This function should return `True` if `date_range` is `None`, or if the `track.created_at` falls within the range. Remember to handle timezones correctly (the API provides UTC dates).
-    -   [ ] 3.5 In the main loop of `process_stream`, modify the `if` condition to check both `track_matches_filter` (for length) and the new `track_matches_scope`.
-    -   [ ] 3.6 In `src/soundcloud_organizer/main.py`, wrap the call to `process_stream` in a `try...except ValueError` block to catch parsing errors and display them cleanly.
-    -   [ ] 3.7 Update `tests/test_processor.py` to test the combined filtering. Add tests that provide a scope and ensure only tracks within that date range are processed.
+    -   [x] 3.1 In `src/soundcloud_organizer/processor.py`, update the `process_stream` function signature to accept the new `scope: str | None` parameter.
+    -   [x] 3.2 At the beginning of `process_stream`, if `scope` is not `None`, call the `scope_parser.parse_scope` function to get the date range. Handle the potential `ValueError` and print it to the console, then exit gracefully.
+    -   [x] 3.3 Create a new filter function `track_matches_scope(track: Track, date_range: tuple[datetime, datetime] | None) -> bool`.
+    -   [x] 3.4 This function should return `True` if `date_range` is `None`, or if the `track.created_at` falls within the range. Remember to handle timezones correctly (the API provides UTC dates).
+    -   [x] 3.5 In the main loop of `process_stream`, modify the `if` condition to check both `track_matches_filter` (for length) and the new `track_matches_scope`.
+    -   [x] 3.6 In `src/soundcloud_organizer/main.py`, wrap the call to `process_stream` in a `try...except ValueError` block to catch parsing errors and display them cleanly.
+    -   [x] 3.7 Update `tests/test_processor.py` to test the combined filtering. Add tests that provide a scope and ensure only tracks within that date range are processed.
 
--   [ ] **4.0 Update Documentation**
-    -   [ ] 4.1 In `README.md`, update the "Usage" section to document the new `--scope` option.
+-   [x] **4.0 Update Documentation**
+    -   [x] 4.1 In `README.md`, update the "Features" and "Usage" sections to document the new `--scope` option.
     -   [ ] 4.2 Provide examples of how to use the new option, similar to the existing examples for `--length-filter`.

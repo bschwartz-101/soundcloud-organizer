@@ -10,6 +10,7 @@ This tool helps you automatically discover, filter, and organize music from your
 - **Secure OAuth2 Login:** Authorize the application with your SoundCloud account without sharing your password.
 - **Automated Curation:** Fetches tracks from your main activity stream.
 - **Track Filtering:** Filter tracks by length: "short" (<5 min), "medium" (5-20 min), or "long" (>20 min).
+- **Date Scoping:** Filter tracks by time interval (e.g., `last-month`, `ytd`, `2023`, `2023-01`).
 - **Automatic Playlist Creation:** Creates monthly playlists (e.g., `YYYY-MM`) if they don't already exist.
 - **Idempotent:** Running the tool multiple times won't create duplicate playlists or add duplicate tracks.
 

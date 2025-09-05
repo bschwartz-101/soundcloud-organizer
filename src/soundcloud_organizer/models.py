@@ -31,11 +31,12 @@ class Track(BaseModel):
         The API can return ISO format ('YYYY-MM-DDTHH:MM:SSZ') or an older
         format ('YYYY/MM/DD HH:MM:SS +0000').
         """
-        if isinstance(v, str):
-            # Replace slashes and remove the timezone for consistent parsing
-            v_normalized = v.replace("/", "-").split(" +")[0]
-            return v_normalized
-        return v
+        # The SoundCloud API provides UTC dates. We need to ensure they are parsed
+        # as timezone-aware datetime objects. Pydantic can handle ISO 8601
+        # format ('...Z') automatically. We just need to handle the older format.
+        if isinstance(v, str) and " +0000" in v:
+            return datetime.strptime(v, "%Y/%m/%d %H:%M:%S %z")
+        return v  # Let Pydantic handle other formats like ISO 8601
 
 
 class Playlist(BaseModel):

@@ -1,3 +1,1 @@
-from .main import app
-
-main = app
+"""SoundCloud Organizer: A CLI tool to organize your SoundCloud stream."""

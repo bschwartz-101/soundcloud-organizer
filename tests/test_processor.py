@@ -1,6 +1,6 @@
 """Tests for the processor module."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from rich.console import Console
@@ -10,6 +10,7 @@ from soundcloud_organizer.processor import (
     TrackLengthFilter,
     process_stream,
     track_matches_filter,
+    track_matches_scope,
 )
 
 
@@ -52,6 +53,64 @@ def test_track_matches_filter(duration_ms, length_filter, expected):
     assert track_matches_filter(track, length_filter) == expected
 
 
+@pytest.mark.parametrize(
+    "track_date_str, date_range, expected",
+    [
+        # No date range provided, should always match
+        ("2024-01-15T12:00:00Z", None, True),
+        # Track date is within the range
+        (
+            "2024-01-15T12:00:00Z",
+            (
+                datetime(2024, 1, 1, tzinfo=timezone.utc),
+                datetime(2024, 1, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            ),
+            True,
+        ),
+        # Track date is before the range
+        (
+            "2023-12-31T23:59:59Z",
+            (
+                datetime(2024, 1, 1, tzinfo=timezone.utc),
+                datetime(2024, 1, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            ),
+            False,
+        ),
+        # Track date is after the range
+        (
+            "2024-02-01T00:00:00Z",
+            (
+                datetime(2024, 1, 1, tzinfo=timezone.utc),
+                datetime(2024, 1, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            ),
+            False,
+        ),
+        # Track date is exactly on the start boundary
+        (
+            "2024-01-01T00:00:00Z",
+            (
+                datetime(2024, 1, 1, tzinfo=timezone.utc),
+                datetime(2024, 1, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            ),
+            True,
+        ),
+        # Track date is exactly on the end boundary
+        (
+            "2024-01-31T23:59:59.999999Z",
+            (
+                datetime(2024, 1, 1, tzinfo=timezone.utc),
+                datetime(2024, 1, 31, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            ),
+            True,
+        ),
+    ],
+)
+def test_track_matches_scope(track_date_str, date_range, expected):
+    """Test the track_matches_scope function with various dates and ranges."""
+    track = create_mock_track(1, 180_000, track_date_str)
+    assert track_matches_scope(track, date_range) == expected
+
+
 def test_process_stream_creates_new_playlist(mocker):
     """Test that a new playlist is created when one doesn't exist."""
     mock_client = mocker.MagicMock()
@@ -73,10 +132,8 @@ def test_process_stream_creates_new_playlist(mocker):
     # Assertions
     mock_client.get_stream.assert_called_once()
     mock_client.get_my_playlists.assert_called_once()
-    mock_client.create_playlist.assert_called_once_with("2023-10")
-    mock_client.add_tracks_to_playlist.assert_called_once_with(
-        created_playlist.id, [track1.id]
-    )
+    mock_client.create_playlist.assert_called_once_with("2023-10", [track1.id])
+    mock_client.add_tracks_to_playlist.assert_not_called()
 
 
 def test_process_stream_uses_existing_playlist(mocker):
@@ -124,5 +181,43 @@ def test_process_stream_groups_tracks_by_month(mocker):
     process_stream(mock_client, TrackLengthFilter.ALL, mock_console)
 
     assert mock_client.create_playlist.call_count == 2
-    mock_client.add_tracks_to_playlist.assert_any_call(1, [track_oct.id])
-    mock_client.add_tracks_to_playlist.assert_any_call(2, [track_nov.id])
+    mock_client.create_playlist.assert_any_call("2023-10", [track_oct.id])
+    mock_client.create_playlist.assert_any_call("2023-11", [track_nov.id])
+
+
+def test_process_stream_with_scope_filter(mocker):
+    """Test that process_stream correctly filters tracks by scope and length."""
+    mock_client = mocker.MagicMock()
+    mock_console = mocker.MagicMock(spec=Console)
+
+    # Tracks:
+    # 1. In scope (Oct 2023), matches length (short) -> Should be processed
+    # 2. In scope (Oct 2023), does NOT match length (long) -> Should be filtered out
+    # 3. Out of scope (Nov 2023), matches length (short) -> Should be filtered out
+    track_in_scope_match_len = create_mock_track(101, 180_000, "2023-10-15T12:00:00Z")
+    track_in_scope_no_match_len = create_mock_track(
+        102, 1_800_000, "2023-10-16T12:00:00Z"
+    )
+    track_out_of_scope_match_len = create_mock_track(
+        103, 180_000, "2023-11-15T12:00:00Z"
+    )
+
+    mock_client.get_stream.return_value = [
+        StreamItem(type="track", origin=track_in_scope_match_len),
+        StreamItem(type="track", origin=track_in_scope_no_match_len),
+        StreamItem(type="track", origin=track_out_of_scope_match_len),
+    ]
+
+    # No existing playlists
+    mock_client.get_my_playlists.return_value = []
+    created_playlist = Playlist(id=1, title="2023-10", track_count=0, tracks=[])
+    mock_client.create_playlist.return_value = created_playlist
+
+    # Call with scope for Oct 2023 and filter for short tracks
+    process_stream(mock_client, TrackLengthFilter.SHORT, mock_console, scope="2023-10")
+
+    # Assertions
+    mock_client.create_playlist.assert_called_once_with(
+        "2023-10", [track_in_scope_match_len.id]
+    )
+    mock_client.add_tracks_to_playlist.assert_not_called()

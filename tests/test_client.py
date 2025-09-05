@@ -118,7 +118,7 @@ def test_create_playlist(client, mock_session):
     }
     mock_session.post.return_value.json.return_value = created_playlist_response
 
-    playlist = client.create_playlist(new_playlist_title)
+    playlist = client.create_playlist(new_playlist_title, [123, 456])
 
     assert playlist.id == 201
     assert playlist.title == new_playlist_title
@@ -127,7 +127,7 @@ def test_create_playlist(client, mock_session):
         "playlist": {
             "title": new_playlist_title,
             "sharing": "public",
-            "tracks": [],
+            "tracks": [{"id": 123}, {"id": 456}],
         }
     }
     mock_session.post.assert_called_once_with(
@@ -158,8 +158,7 @@ def test_add_tracks_to_playlist_with_new_tracks(client, mock_session, mocker):
         f"https://api.soundcloud.com/playlists/{playlist_id}"
     )
 
-    # Assert PUT was called with the correct combined list of track IDs
-    # The order of IDs in the final payload doesn't matter, so we check the contents.
+    # Assert PUT was called with the correct combined list of track objects.
     _, kwargs = mock_session.put.call_args
     sent_track_ids = {track["id"] for track in kwargs["json"]["playlist"]["tracks"]}
     assert sent_track_ids == {50, 60}
