@@ -41,7 +41,12 @@ def track_matches_filter(track: Track, length_filter: TrackLengthFilter) -> bool
     return False
 
 
-def process_stream(client: SoundCloudClient, length_filter: TrackLengthFilter, console: Console):
+def process_stream(
+    client: SoundCloudClient,
+    length_filter: TrackLengthFilter,
+    console: Console,
+    dry_run: bool = False,
+):
     """
     Fetches the stream, filters tracks, and adds them to monthly playlists.
 
@@ -49,8 +54,12 @@ def process_stream(client: SoundCloudClient, length_filter: TrackLengthFilter, c
         client: An authenticated SoundCloudClient.
         length_filter: The track length filter to apply.
         console: A rich Console instance for output.
+        dry_run: If True, only print actions without performing them.
     """
-    console.print(f"Fetching stream and filtering for '{length_filter.value}' tracks...", style="yellow")
+    console.print(
+        f"Fetching stream and filtering for '{length_filter.value}' tracks...",
+        style="yellow",
+    )
 
     tracks_by_playlist = defaultdict(list)
 
@@ -59,11 +68,24 @@ def process_stream(client: SoundCloudClient, length_filter: TrackLengthFilter, c
         track = item.origin
         if track and track_matches_filter(track, length_filter):
             playlist_name = track.created_at.strftime("%Y-%m")
-            tracks_by_playlist[playlist_name].append(track.id)
-            console.log(f"Found matching track: '{track.title}' -> Playlist '{playlist_name}'")
+            tracks_by_playlist[playlist_name].append(track)
+            console.log(
+                f"Found matching track: '{track.title}' -> Playlist '{playlist_name}'"
+            )
 
     if not tracks_by_playlist:
-        console.print("No new matching tracks found in your stream.", style="bold green")
+        console.print(
+            "No new matching tracks found in your stream.", style="bold green"
+        )
+        return
+
+    if dry_run:
+        console.print("\n[bold yellow]-- DRY RUN --[/bold yellow]")
+        console.print("The following actions would be taken:")
+        for playlist_name, tracks in tracks_by_playlist.items():
+            track_titles = "\n".join([f"  - '{t.title}'" for t in tracks])
+            console.print(f"\n[bold cyan]Playlist '{playlist_name}':[/bold cyan]")
+            console.print(f"Would add {len(tracks)} track(s):\n{track_titles}")
         return
 
     console.print("\nProcessing playlists...", style="yellow")
@@ -72,7 +94,8 @@ def process_stream(client: SoundCloudClient, length_filter: TrackLengthFilter, c
     existing_playlists = {p.title: p for p in client.get_my_playlists()}
 
     # 3. Iterate through grouped tracks and add them to playlists
-    for playlist_name, track_ids in tracks_by_playlist.items():
+    for playlist_name, tracks in tracks_by_playlist.items():
+        track_ids = [track.id for track in tracks]
         playlist = existing_playlists.get(playlist_name)
 
         if not playlist:
@@ -81,10 +104,14 @@ def process_stream(client: SoundCloudClient, length_filter: TrackLengthFilter, c
                 playlist = client.create_playlist(playlist_name)
                 existing_playlists[playlist_name] = playlist  # Add to our cache
             except Exception as e:
-                console.print(f"Error creating playlist {playlist_name}: {e}", style="bold red")
+                console.print(
+                    f"Error creating playlist {playlist_name}: {e}", style="bold red"
+                )
                 continue
 
-        console.print(f"Adding {len(track_ids)} track(s) to playlist '{playlist.title}'...")
+        console.print(
+            f"Adding {len(track_ids)} track(s) to playlist '{playlist.title}'..."
+        )
         client.add_tracks_to_playlist(playlist.id, track_ids)
 
     console.print("\n✅ Processing complete!", style="bold green")

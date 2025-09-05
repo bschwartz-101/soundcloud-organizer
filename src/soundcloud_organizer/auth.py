@@ -12,8 +12,8 @@ from requests_oauthlib import OAuth2Session
 from soundcloud_organizer.config import Settings, Token, save_settings
 
 # SoundCloud API OAuth2 URLs
-AUTHORIZATION_URL = "https://soundcloud.com/connect"
-TOKEN_URL = "https://api.soundcloud.com/oauth2/token"
+AUTHORIZATION_URL = "https://secure.soundcloud.com/authorize"
+TOKEN_URL = "https://secure.soundcloud.com/oauth/token"
 
 # Local server settings for the redirect
 REDIRECT_URI = "http://127.0.0.1:8080/"
@@ -69,7 +69,9 @@ def get_token(client_id: str, client_secret: str) -> Token:
         server_thread.daemon = True
         server_thread.start()
 
-        soundcloud = OAuth2Session(client_id, redirect_uri=REDIRECT_URI)
+        # Enable PKCE (Proof Key for Code Exchange) as required by SoundCloud's API
+        # See: https://developers.soundcloud.com/docs/api/guide#auth-code
+        soundcloud = OAuth2Session(client_id, redirect_uri=REDIRECT_URI, pkce="S256")
         authorization_url, _ = soundcloud.authorization_url(AUTHORIZATION_URL)
 
         print(f"Opening your browser to visit:\n\n{authorization_url}\n")
@@ -79,7 +81,12 @@ def get_token(client_id: str, client_secret: str) -> Token:
         httpd.shutdown()
 
     token_data = soundcloud.fetch_token(
-        TOKEN_URL, client_secret=client_secret, code=auth_code
+        TOKEN_URL,
+        client_secret=client_secret,
+        code=auth_code,
+        # The SoundCloud API expects client_id and client_secret in the body,
+        # not as a Basic Auth header. `include_client_id` forces this.
+        include_client_id=True,
     )
     return Token.model_validate(token_data)
 

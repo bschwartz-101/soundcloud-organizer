@@ -1,9 +1,9 @@
 """Pydantic models for SoundCloud API objects."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class User(BaseModel):
@@ -21,6 +21,21 @@ class Track(BaseModel):
     title: str
     duration: int  # in milliseconds
     user: User
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _parse_datetime(cls, v: Any) -> Any:
+        """
+        Handles multiple datetime formats from the SoundCloud API.
+
+        The API can return ISO format ('YYYY-MM-DDTHH:MM:SSZ') or an older
+        format ('YYYY/MM/DD HH:MM:SS +0000').
+        """
+        if isinstance(v, str):
+            # Replace slashes and remove the timezone for consistent parsing
+            v_normalized = v.replace("/", "-").split(" +")[0]
+            return v_normalized
+        return v
 
 
 class Playlist(BaseModel):

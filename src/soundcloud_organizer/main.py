@@ -45,20 +45,35 @@ def organize(
         "-f",
         case_sensitive=False,
         help="Filter tracks by length.",
-    )
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Show what tracks would be organized without making any changes.",
+    ),
 ):
     """Fetch, filter, and organize tracks from your SoundCloud stream."""
-    console.print("🚀 Starting SoundCloud Organizer...", style="bold magenta")
+    if dry_run:
+        console.print(
+            "🚀 Starting SoundCloud Organizer in [bold yellow]dry-run[/bold yellow] mode...",
+            style="bold magenta",
+        )
+    else:
+        console.print("🚀 Starting SoundCloud Organizer...", style="bold magenta")
+
     settings = load_settings()
 
     if not settings.token:
-        console.print("❌ You are not logged in. Please run 'soundcloud-organizer login' first.", style="bold red")
+        console.print(
+            "❌ You are not logged in. Please run 'soundcloud-organizer login' first.",
+            style="bold red",
+        )
         raise typer.Exit(code=1)
 
     try:
         session = auth.get_authenticated_session(settings)
         client = SoundCloudClient(session)
-        process_stream(client, length_filter, console)
+        process_stream(client, length_filter, console, dry_run)
     except Exception as e:
         console.print(f"❌ An unexpected error occurred: {e}", style="bold red")
         raise typer.Exit(code=1)
