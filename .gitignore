@@ -208,3 +208,7 @@ pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,venv,dotenv
 
+docs/soundcloud_api.md
+rules/
+*.log
+tasks/
