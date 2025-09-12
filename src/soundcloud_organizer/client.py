@@ -2,8 +2,8 @@
 
 from typing import Iterator, List, Optional
 
+from authlib.integrations.httpx_client import OAuth2Client
 from loguru import logger
-from requests_oauthlib import OAuth2Session
 
 from soundcloud_organizer.models import Playlist, StreamItem
 
@@ -13,12 +13,12 @@ API_BASE_URL = "https://api.soundcloud.com"
 class SoundCloudClient:
     """A client for interacting with the SoundCloud API."""
 
-    def __init__(self, session: OAuth2Session):
+    def __init__(self, session: OAuth2Client):
         """
         Initializes the SoundCloudClient.
 
         Args:
-            session: An authenticated OAuth2Session instance.
+            session: An authenticated OAuth2Client instance.
         """
         self.session = session
         self.base_url = API_BASE_URL
@@ -37,7 +37,7 @@ class SoundCloudClient:
         params = {"limit": 50}  # Use a reasonable page size
 
         while url:
-            logger.debug(f"Fetching stream page: GET {url}")
+            logger.debug(f"Fetching stream page: GET {url} with params {params}")
             response = self.session.get(url, params=params)
             logger.debug(f"Response status: {response.status_code}")
             response.raise_for_status()  # Raise an exception for bad status codes
@@ -52,8 +52,7 @@ class SoundCloudClient:
 
             # Get the next page URL, and clear params as next_href is a full URL
             url = data.get("next_href")
-            if url:
-                params = {}
+            params = None
 
     def get_my_playlists(self) -> List[Playlist]:
         """

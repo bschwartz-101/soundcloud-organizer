@@ -7,8 +7,8 @@ import webbrowser
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
+from authlib.integrations.httpx_client import OAuth2Client
 from loguru import logger
-from requests_oauthlib import OAuth2Session
 
 from soundcloud_organizer.config import Settings, Token, save_settings
 
@@ -70,37 +70,40 @@ def get_token(client_id: str, client_secret: str) -> Token:
         server_thread.daemon = True
         server_thread.start()
 
-        # Enable PKCE (Proof Key for Code Exchange) as required by SoundCloud's API
-        # See: https://developers.soundcloud.com/docs/api/guide#auth-code
-        soundcloud = OAuth2Session(client_id, redirect_uri=REDIRECT_URI, pkce="S256")
-        authorization_url, _ = soundcloud.authorization_url(AUTHORIZATION_URL)
+        with OAuth2Client(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=REDIRECT_URI,
+            code_challenge_method="S256",
+        ) as client:
+            authorization_url, _ = client.create_authorization_url(AUTHORIZATION_URL)
 
-        logger.info(f"Opening browser for authentication: {authorization_url}")
-        webbrowser.open(authorization_url)
+            logger.info(f"Opening browser for authentication: {authorization_url}")
+            webbrowser.open(authorization_url)
 
-        code_received.wait()  # Wait for the handler to receive the code
-        httpd.shutdown()
+            code_received.wait()  # Wait for the handler to receive the code
+            httpd.shutdown()
 
-    token_data = soundcloud.fetch_token(
-        TOKEN_URL,
-        client_secret=client_secret,
-        code=auth_code,
-        # The SoundCloud API expects client_id and client_secret in the body,
-        # not as a Basic Auth header. `include_client_id` forces this.
-        include_client_id=True,
-    )
-    return Token.model_validate(token_data)
+            token_data = client.fetch_token(
+                TOKEN_URL,
+                code=auth_code,
+                grant_type="authorization_code",
+                client_id=client_id,
+                client_secret=client_secret,
+                redirect_uri=REDIRECT_URI,
+            )
+            return Token.model_validate(token_data)
 
 
-def get_authenticated_session(settings: Settings) -> OAuth2Session:
+def get_authenticated_session(settings: Settings) -> OAuth2Client:
     """
-    Creates and returns an authenticated OAuth2Session that handles token refreshes.
+    Creates and returns an authenticated OAuth2Client that handles token refreshes.
 
     Args:
         settings: The application settings containing client credentials and token.
 
     Returns:
-        An authenticated OAuth2Session instance.
+        An authenticated OAuth2Client instance.
 
     Raises:
         ValueError: If client_id, client_secret, or token is missing from settings.
@@ -116,16 +119,18 @@ def get_authenticated_session(settings: Settings) -> OAuth2Session:
         settings.token = Token.model_validate(new_token_data)
         save_settings(settings)
 
-    # Extra parameters needed for the token refresh request
-    extra = {
-        "client_id": settings.client_id,
-        "client_secret": settings.client_secret,
-    }
+    def _add_redirect_uri_to_refresh_token_request(url, headers, body):
+        body += f"&redirect_uri={REDIRECT_URI}"
+        return url, headers, body
 
-    return OAuth2Session(
+    client = OAuth2Client(
         client_id=settings.client_id,
+        client_secret=settings.client_secret,
         token=settings.token.model_dump(),
-        auto_refresh_url=TOKEN_URL,
-        auto_refresh_kwargs=extra,
-        token_updater=token_updater,
+        update_token=token_updater,
+        token_endpoint=TOKEN_URL,
     )
+    client.register_compliance_hook(
+        "refresh_token_request", _add_redirect_uri_to_refresh_token_request
+    )
+    return client

@@ -1,7 +1,8 @@
 """Tests for the SoundCloud API client."""
 
+import httpx
 import pytest
-from requests_oauthlib import OAuth2Session
+from authlib.integrations.httpx_client import OAuth2Client
 
 from soundcloud_organizer.client import SoundCloudClient
 
@@ -61,8 +62,8 @@ PLAYLIST_DETAIL_RESPONSE = {
 
 @pytest.fixture
 def mock_session(mocker):
-    """Fixture for a mocked OAuth2Session."""
-    return mocker.MagicMock(spec=OAuth2Session)
+    """Fixture for a mocked OAuth2Client."""
+    return mocker.MagicMock(spec=OAuth2Client)
 
 
 @pytest.fixture
@@ -74,9 +75,10 @@ def client(mock_session):
 def test_get_stream_pagination(client, mock_session, mocker):
     """Test that get_stream handles pagination correctly."""
     # Mock the responses for two pages
+    request = httpx.Request("GET", "https://api.soundcloud.com/me/activities/tracks")
     mock_session.get.side_effect = [
-        mocker.MagicMock(json=lambda: STREAM_PAGE_1),
-        mocker.MagicMock(json=lambda: STREAM_PAGE_2),
+        httpx.Response(200, json=STREAM_PAGE_1, request=request),
+        httpx.Response(200, json=STREAM_PAGE_2, request=request),
     ]
 
     stream_items = list(client.get_stream())
@@ -97,7 +99,10 @@ def test_get_stream_pagination(client, mock_session, mocker):
 
 def test_get_my_playlists(client, mock_session):
     """Test fetching user's playlists."""
-    mock_session.get.return_value.json.return_value = PLAYLISTS_RESPONSE
+    request = httpx.Request("GET", "https://api.soundcloud.com/me/playlists")
+    mock_session.get.return_value = httpx.Response(
+        200, json=PLAYLISTS_RESPONSE, request=request
+    )
 
     playlists = client.get_my_playlists()
 
@@ -116,7 +121,10 @@ def test_create_playlist(client, mock_session):
         "track_count": 0,
         "tracks": [],
     }
-    mock_session.post.return_value.json.return_value = created_playlist_response
+    request = httpx.Request("POST", "https://api.soundcloud.com/playlists")
+    mock_session.post.return_value = httpx.Response(
+        200, json=created_playlist_response, request=request
+    )
 
     playlist = client.create_playlist(new_playlist_title, [123, 456])
 
@@ -142,14 +150,16 @@ def test_add_tracks_to_playlist_with_new_tracks(client, mock_session, mocker):
     track_ids_to_add = [50, 60]
 
     # Mock the GET for the playlist details and the PUT for the update
-    mock_session.get.return_value = mocker.MagicMock(
-        json=lambda: PLAYLIST_DETAIL_RESPONSE
+    request = httpx.Request("GET", f"https://api.soundcloud.com/playlists/{playlist_id}")
+    mock_session.get.return_value = httpx.Response(
+        200, json=PLAYLIST_DETAIL_RESPONSE, request=request
     )
+
     # The PUT request returns the updated playlist. We need to mock this response.
     updated_playlist_response = PLAYLIST_DETAIL_RESPONSE.copy()
     updated_playlist_response["track_count"] = 2
-    mock_session.put.return_value = mocker.MagicMock(
-        json=lambda: updated_playlist_response
+    mock_session.put.return_value = httpx.Response(
+        200, json=updated_playlist_response, request=request
     )
 
     client.add_tracks_to_playlist(playlist_id, track_ids_to_add)
@@ -169,8 +179,9 @@ def test_add_tracks_to_playlist_with_no_new_tracks(client, mock_session, mocker)
     playlist_id = 102
     track_ids_to_add = [50]  # This track ID is already in PLAYLIST_DETAIL_RESPONSE
 
-    mock_session.get.return_value = mocker.MagicMock(
-        json=lambda: PLAYLIST_DETAIL_RESPONSE
+    request = httpx.Request("GET", f"https://api.soundcloud.com/playlists/{playlist_id}")
+    mock_session.get.return_value = httpx.Response(
+        200, json=PLAYLIST_DETAIL_RESPONSE, request=request
     )
 
     result = client.add_tracks_to_playlist(playlist_id, track_ids_to_add)
